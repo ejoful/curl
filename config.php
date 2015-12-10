@@ -13,7 +13,7 @@ $user = 'root';
 // 密码
 $password = "root";
 // 连接
-$con = mysql_connect($url, $user, $password);
+$con = mysql_connect($url, $user, $password) or die("数据错误!"); ;
 
 // 数据库
 $database = 'taobao_data';

@@ -11,24 +11,18 @@ require_once('./config.php');
 echo "<pre>";
 
 
-// æŸ¥çœ‹tb_productè¡¨ä¸­å·²æœ‰çš„å•†å“æ•°æ®nid
+// ²é¿´tb_product±íÖĞÒÑÓĞµÄÉÌÆ·Êı¾İnid
 $sql = "SELECT * FROM `tb_product_list` WHERE `status` = 0";
 
-$retval = mysql_query($sql, $con) or die(mysql_error());
+$retval = mysql_query($sql, $con);
 if(!$retval)
 {
     die('Could not connect: ' . mysql_error());
 }
-$row_list = [];
-while ($one = mysql_fetch_array($retval, MYSQL_ASSOC))
-{
-    $row_list[] = $one;
-}
-
 
 $id = 0;
 $product_list = [];
-foreach ($row_list as $row)
+while ($row = mysql_fetch_array($retval, MYSQL_ASSOC))
 {
 
     print_r($row['model'].'---------------'. __LINE__ . "<br>\n\r");
@@ -36,7 +30,7 @@ foreach ($row_list as $row)
 
 
     $result = [];
-    $url = "https://s.taobao.com/search?q=" . $row['name'] . "&ie=utf8&app=detailproduct&through=1";
+    $url = "https://s.taobao.com/search?q=" . $row['model'] . "&ie=utf8&app=detailproduct&through=1";
     for($i=0, $data = get_html($url, $row, $con), $products = $data[0]["products"], $page = $data[0]["totalPage"]; $i < $page; )
     {
 //            print_r($products);
@@ -53,11 +47,11 @@ foreach ($row_list as $row)
             }
         }
         print_r(count($result) . '---------------'. __LINE__ . "<br>\n\r");
-        // æš‚åœ30s
+        // ÔİÍ£30s
         sleep(5);
 
         ++$i;
-        $url = "https://s.taobao.com/search?q=" . $row['name'] . "&ie=utf8&app=detailproduct&through=1&bcoffset=0&s=" . (44 * $i);
+        $url = "https://s.taobao.com/search?q=" . $row['model'] . "&ie=utf8&app=detailproduct&through=1&bcoffset=0&s=" . (44 * $i);
         $data = get_html($url, $row, $con);
         $products = $data[0]["products"];
 
@@ -68,7 +62,7 @@ foreach ($row_list as $row)
     if ($result) {
         insert_database($result, $row['model'], $row['name'], $row['shundian_price'], $con);
 
-        // æˆåŠŸæ’å…¥çš„æ•°æ®statusè®¾ç½®ä¸º1
+        // ³É¹¦²åÈëµÄÊı¾İstatusÉèÖÃÎª1
         $sql = "UPDATE `tb_product_list` SET `status` = '1' WHERE `id` = " . $row['id'];
 
         $retval = mysql_query($sql, $con);
@@ -88,7 +82,7 @@ function get_html( $url, $row, $con )
 
 
 
-    // è®¾ç½®æµè§ˆå™¨çš„ç‰¹å®šheader
+    // ÉèÖÃä¯ÀÀÆ÷µÄÌØ¶¨header
     curl_setopt($ch, CURLOPT_HTTPHEADER, array(
         "Host: s.taobao.com",
         "Connection: keep-alive",
@@ -96,16 +90,14 @@ function get_html( $url, $row, $con )
         "Upgrade-Insecure-Requests: 1",
         "DNT:1",
         "Accept-Language: zh-CN,zh;q=0.8,en-GB;q=0.6,en;q=0.4,en-US;q=0.2",
-        "Cookie:cna=ecujDgxJEU8CAdrwlTLMuyK+; thw=cn; miid=7140089985405878683; _m_user_unitinfo_=center; v=0; alitrackid=www.taobao.com; swfstore=164423; uc2=wuf=https%3A%2F%2Fwww.baidu.com%2Flink%3Furl%3DyuLwEC5VzXl67TX71pM-Pt5ijrzvVp76FosboF3-bRXW_TIMHJDVmk32CWs6e7ra1SuZudckIhHttgRUS5bN_0MaK1Kv-zHpfr0mjFVBPh-Crtxj19HCnfLT8x4uC3p5%26wd%3D%26eqid%3Db1f8688b001197fa000000035668de3b; uc3=nk2=AmkbKafOx9I%3D&id2=UU8PbnneKzSx&vt3=F8dAScPiH8lvv%2FHL%2BUQ%3D&lg2=UIHiLt3xD8xYTw%3D%3D; existShop=MTQ0OTczNjI5Mw%3D%3D; lgc=axianzia; tracknick=axianzia; sg=a19; cookie2=18b3234c8a526abaa23707836bdb48db; mt=np=&ci=3_1; cookie1=U%2BItOIkoJQAKEBg7UNusLVWk5N%2Bjy%2B0nBH%2BLYA08k7o%3D; unb=277562651; skt=3815ab30afb05045; t=441f8ce4777a72bb7ea38953b39d0d4c; _cc_=U%2BGCWk%2F7og%3D%3D; tg=0; _l_g_=Ug%3D%3D; _nk_=axianzia; cookie17=UU8PbnneKzSx; uc1=cookie14=UoWzUGNgydE6eg%3D%3D&existShop=false&cookie16=URm48syIJ1yk0MX2J7mAAEhTuw%3D%3D&cym=1&cookie21=UIHiLt3xSi%2BtvZI3oKTk0Q%3D%3D&tag=1&cookie15=U%2BGCWk%2F75gdr5Q%3D%3D&pas=0; lastalitrackid=sec.taobao.com; _tb_token_=7838551b54eab; _m_h5_tk=75ed71e765ff08d7ffa6f07be4dbc4e4_1449744286222; _m_h5_tk_enc=bfdd680ef33e03310ba83a1c1d31628f; whl=-1%260%260%261449741955290; JSESSIONID=989207CF7BADC9D396083DB8A0A73BA2; x=e%3D1%26p%3D*%26s%3D0%26c%3D0%26f%3D0%26g%3D0%26t%3D0%26__ll%3D-1%26_ato%3D0; l=Ao2N3oQDxgssBflwOkrvPU3UHacHasE8; isg=DCF91E28ABE5379D9FB23BA07B707C10",
+        "Cookie:cna=ecujDgxJEU8CAdrwlTLMuyK+; thw=cn; miid=7140089985405878683; _m_user_unitinfo_=center; v=0; alitrackid=www.taobao.com; swfstore=164423; uc2=wuf=https%3A%2F%2Fwww.baidu.com%2Flink%3Furl%3DyuLwEC5VzXl67TX71pM-Pt5ijrzvVp76FosboF3-bRXW_TIMHJDVmk32CWs6e7ra1SuZudckIhHttgRUS5bN_0MaK1Kv-zHpfr0mjFVBPh-Crtxj19HCnfLT8x4uC3p5%26wd%3D%26eqid%3Db1f8688b001197fa000000035668de3b; uc3=nk2=AmkbKafOx9I%3D&id2=UU8PbnneKzSx&vt3=F8dAScPiH8lvv%2FHL%2BUQ%3D&lg2=UIHiLt3xD8xYTw%3D%3D; existShop=MTQ0OTczNjI5Mw%3D%3D; lgc=axianzia; tracknick=axianzia; sg=a19; cookie2=18b3234c8a526abaa23707836bdb48db; mt=np=&ci=3_1; cookie1=U%2BItOIkoJQAKEBg7UNusLVWk5N%2Bjy%2B0nBH%2BLYA08k7o%3D; unb=277562651; skt=3815ab30afb05045; t=441f8ce4777a72bb7ea38953b39d0d4c; _cc_=U%2BGCWk%2F7og%3D%3D; tg=0; _l_g_=Ug%3D%3D; _nk_=axianzia; cookie17=UU8PbnneKzSx; _m_h5_tk=3714f84681c5c0d82aebedb04ea01912_1449740259282; _m_h5_tk_enc=06bf6fd0587cb173769682b616e299da; uc1=cookie14=UoWzUGNgydE6eg%3D%3D&existShop=false&cookie16=URm48syIJ1yk0MX2J7mAAEhTuw%3D%3D&cym=1&cookie21=UIHiLt3xSi%2BtvZI3oKTk0Q%3D%3D&tag=1&cookie15=U%2BGCWk%2F75gdr5Q%3D%3D&pas=0; _tb_token_=7838551b54eab; lastalitrackid=sec.taobao.com; JSESSIONID=CB0105CA28B45268DABC5CBAD8A3B06B; x=e%3D1%26p%3D*%26s%3D0%26c%3D0%26f%3D0%26g%3D0%26t%3D0%26__ll%3D-1%26_ato%3D0; whl=-1%260%260%261449737699577; isg=F080DC482F1CEFF4A5E286752360FC27; l=Apubq32laEUO/w/meICxo5x4q/EFJK9j",
 
 
 
-
-
-        ));
+    ));
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0');
-    // åœ¨HTTPè¯·æ±‚å¤´ä¸­"Referer: "çš„å†…å®¹ã€‚
-    curl_setopt($ch, CURLOPT_REFERER,"https://s.taobao.com/search?q=" . $row['name'] . "&ie=utf8&app=detailproduct&through=1");
+    // ÔÚHTTPÇëÇóÍ·ÖĞ"Referer: "µÄÄÚÈİ¡£
+    curl_setopt($ch, CURLOPT_REFERER,"https://s.taobao.com/search?q=" . $row['model'] . "&ie=utf8&app=detailproduct&through=1");
     curl_setopt($ch, CURLOPT_ENCODING, "gzip, deflate, sdch");
 
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
@@ -124,7 +116,7 @@ function get_html( $url, $row, $con )
     {
         echo 'Curl error: ' . curl_error($ch) . "<br>\n\r";
 
-        // æŠ“å–å‡ºé”™çš„æ•°æ®statusè®¾ç½®ä¸º0
+        // ×¥È¡³ö´íµÄÊı¾İstatusÉèÖÃÎª0
         $sql = "UPDATE `tb_product_list` SET `status` = '0' WHERE `id` = " . $row['id'];
 
         $retval = mysql_query($sql, $con);
@@ -136,33 +128,33 @@ function get_html( $url, $row, $con )
         return NULL;
 
     } else {
-        //æ­£åˆ™è¡¨è¾¾å¼å»é™¤æ‰€æœ‰ç©ºæ ¼ï¼ˆåŒ…æ‹¬æ¢è¡Œ ç©ºæ ¼ &nbsp;ï¼‰
-        $html = preg_replace("/(\s|\&nbsp\;|ã€€|\xc2\xa0)/","",$html);
+        //ÕıÔò±í´ïÊ½È¥³ıËùÓĞ¿Õ¸ñ£¨°üÀ¨»»ĞĞ ¿Õ¸ñ &nbsp;£©
+        $html = preg_replace("/(\s|\&nbsp\;|¡¡|\xc2\xa0)/","",$html);
 
-        // åŒ¹é…js
+        // Æ¥Åäjs
         $pattern = '/<script>g_page_config=(.*?);g_srp_loadCss\(\).*?<\/script>/si';
-        //æŠ“å–jsonæ•°æ®
+        //×¥È¡jsonÊı¾İ
         preg_match_all($pattern,$html,$result);
 
         if (empty($result[1][0])) {
-            //è¿”å›False
+            //·µ»ØFalse
             return NULL;
         } else {
 
-            // å°†jsonè½¬ä¸ºæ•°ç»„
+            // ½«json×ªÎªÊı×é
             $data = json_decode($result[1][0]);
 
             //    print_r($data);
 
-            // è·å–å•†å“æ•°æ®
+            // »ñÈ¡ÉÌÆ·Êı¾İ
             $res[0]["products"] = $data->mods->itemlist->data->auctions;
 
 
-            // è·å–æ€»é¡µæ•°
+            // »ñÈ¡×ÜÒ³Êı
             $res[0]["totalPage"] = empty($data->mods->pager->data->totalPage) ? 2 : $data->mods->pager->data->totalPage;
 
 
-            //è¿”å›jsonæ•°æ®
+            //·µ»ØjsonÊı¾İ
             return $res;
         }
     }
@@ -172,30 +164,30 @@ function get_html( $url, $row, $con )
 
 function get($url)
 {
-    // æŠ“å–$urlæŒ‡å‘çš„é¡µé¢
+    // ×¥È¡$urlÖ¸ÏòµÄÒ³Ãæ
     $html = file_get_contents($url);
-    //æ­£åˆ™è¡¨è¾¾å¼å»é™¤æ‰€æœ‰ç©ºæ ¼ï¼ˆåŒ…æ‹¬æ¢è¡Œ ç©ºæ ¼ &nbsp;ï¼‰
-    $html = preg_replace("/(\s|\&nbsp\;|ã€€|\xc2\xa0)/","",$html);
+    //ÕıÔò±í´ïÊ½È¥³ıËùÓĞ¿Õ¸ñ£¨°üÀ¨»»ĞĞ ¿Õ¸ñ &nbsp;£©
+    $html = preg_replace("/(\s|\&nbsp\;|¡¡|\xc2\xa0)/","",$html);
 
-    // åŒ¹é…js
+    // Æ¥Åäjs
     $pattern = '/<script>g_page_config=(.*?);g_srp_loadCss\(\).*?<\/script>/si';
-    //æŠ“å–jsonæ•°æ®
+    //×¥È¡jsonÊı¾İ
     preg_match_all($pattern,$html,$result);
 
     if (empty($result[1][0])) {
-        //è¿”å›False
+        //·µ»ØFalse
         return NULL;
     } else {
 
-        // å°†jsonè½¬ä¸ºæ•°ç»„
+        // ½«json×ªÎªÊı×é
         $data = json_decode($result[1][0]);
 
         //    print_r($data);
 
-        // è·å–å•†å“æ•°æ®
+        // »ñÈ¡ÉÌÆ·Êı¾İ
         $data = $data->mods->itemlist->data->auctions;
 
-        //è¿”å›jsonæ•°æ®
+        //·µ»ØjsonÊı¾İ
         return $data;
     }
 
@@ -208,7 +200,7 @@ function get($url)
 function insert_database($products, $model, $name, $shundian_price, $con)
 {
 
-    // æŸ¥çœ‹tb_productè¡¨ä¸­å·²æœ‰çš„å•†å“æ•°æ®nid
+    // ²é¿´tb_product±íÖĞÒÑÓĞµÄÉÌÆ·Êı¾İnid
     $sql = "SELECT nid FROM `tb_product`";
 
     $retval = mysql_query($sql, $con);
@@ -237,9 +229,9 @@ function insert_database($products, $model, $name, $shundian_price, $con)
             $des_com_aver = $item->shopcard->description[2] / 100.0;
             $des_com_aver .= '%';
             if ($item->shopcard->description[1]) {
-                $des_com_aver = 'é«˜äº ' . $des_com_aver;
+                $des_com_aver = '¸ßÓÚ ' . $des_com_aver;
             } else {
-                $des_com_aver = 'ä½äº ' . $des_com_aver;
+                $des_com_aver = 'µÍÓÚ ' . $des_com_aver;
             }
 
 
@@ -248,9 +240,9 @@ function insert_database($products, $model, $name, $shundian_price, $con)
             $attitude_com_aver = $item->shopcard->service[2] / 100.0;
             $attitude_com_aver .= '%';
             if ($item->shopcard->service[1] > 0) {
-                $attitude_com_aver = 'é«˜äº ' . $attitude_com_aver;
+                $attitude_com_aver = '¸ßÓÚ ' . $attitude_com_aver;
             } else {
-                $attitude_com_aver = 'ä½äº ' . $attitude_com_aver;
+                $attitude_com_aver = 'µÍÓÚ ' . $attitude_com_aver;
             }
 
             $quatity = $item->shopcard->delivery[0] / 100.0;
@@ -258,9 +250,9 @@ function insert_database($products, $model, $name, $shundian_price, $con)
             $quatity_com_aver = $item->shopcard->delivery[2] / 100.0;
             $quatity_com_aver .= '%';
             if ($item->shopcard->delivery[1]) {
-                $quatity_com_aver = 'é«˜äº ' . $quatity_com_aver;
+                $quatity_com_aver = '¸ßÓÚ ' . $quatity_com_aver;
             } else {
-                $quatity_com_aver = 'ä½äº ' . $quatity_com_aver;
+                $quatity_com_aver = 'µÍÓÚ ' . $quatity_com_aver;
             }
 
             $credit = $item->shopcard->sellerCredit;
@@ -272,7 +264,7 @@ function insert_database($products, $model, $name, $shundian_price, $con)
                 $comment_count = 0;
             }
 
-            // æ‹¼æ¥productæ•°æ®
+            // Æ´½ÓproductÊı¾İ
             $data_string .= "(NULL, '$item->nid', '$item->category', '$model', '$name', '$shundian_price', '$item->nick', '$item->view_price', '$view_sales', '$comment_count', '0', '$credit', '$des', '$des_com_aver', '$attitude', '$attitude_com_aver', '$quatity', '$quatity_com_aver', '1'),";
 
         }
@@ -282,10 +274,10 @@ function insert_database($products, $model, $name, $shundian_price, $con)
 
     echo '<br><br>' . $data_string;//die();       //4294967295
 
-// å¦‚æœæœ‰æ•°æ®åˆ™æ’å…¥åˆ°æ•°æ®åº“ä¸­tb_productè¡¨
+// Èç¹ûÓĞÊı¾İÔò²åÈëµ½Êı¾İ¿âÖĞtb_product±í
     if ($data_string) {
 
-        // å»æ‰æœ€åä½ç½®çš„ï¼Œ
+        // È¥µô×îºóÎ»ÖÃµÄ£¬
         $data_string = substr($data_string, 0, -1);
 
         $sql = "INSERT INTO `tb_product` (`id`, `nid`, `category`, `model`, `name`, `shundian_price`, `merchant_name`, `merchant_price`, `view_sales`, `reviews_count`, `is_coalition`, `credit`, `des`, `des_com_aver`, `attitude`, `attitude_com_aver`, `quatity`, `quatity_com_aver`, `good`) VALUES $data_string";
@@ -293,7 +285,7 @@ function insert_database($products, $model, $name, $shundian_price, $con)
         $retval = mysql_query($sql, $con);
         if(!$retval) {
 
-            // æ’å…¥å‡ºé”™çš„æ•°æ®statusè®¾ç½®ä¸º0
+            // ²åÈë³ö´íµÄÊı¾İstatusÉèÖÃÎª0
             $sql = "UPDATE `tb_product_list` SET `status` = '0' WHERE `model` = '$model'and `name` = '$name'";
 
             $retval = mysql_query($sql, $con);
