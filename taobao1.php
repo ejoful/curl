@@ -36,7 +36,7 @@ foreach ($row_list as $row)
 
 
     $result = [];
-    $url = "https://s.taobao.com/search?q=" . $row['name'] . "&ie=utf8&app=detailproduct&through=1";
+    $url = "https://s.taobao.com/search?q=" . $row['model'] . "&ie=utf8&app=detailproduct&through=1";
     for($i=0, $data = get_html($url, $row, $con), $products = $data[0]["products"], $page = $data[0]["totalPage"]; $i < $page; )
     {
 //            print_r($products);
@@ -57,7 +57,7 @@ foreach ($row_list as $row)
         sleep(5);
 
         ++$i;
-        $url = "https://s.taobao.com/search?q=" . $row['name'] . "&ie=utf8&app=detailproduct&through=1&bcoffset=0&s=" . (44 * $i);
+        $url = "https://s.taobao.com/search?q=" . $row['model'] . "&ie=utf8&app=detailproduct&through=1&bcoffset=0&s=" . (44 * $i);
         $data = get_html($url, $row, $con);
         $products = $data[0]["products"];
 
@@ -105,7 +105,7 @@ function get_html( $url, $row, $con )
         ));
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0');
     // 在HTTP请求头中"Referer: "的内容。
-    curl_setopt($ch, CURLOPT_REFERER,"https://s.taobao.com/search?q=" . $row['name'] . "&ie=utf8&app=detailproduct&through=1");
+    curl_setopt($ch, CURLOPT_REFERER,"https://s.taobao.com/search?q=" . $row['model'] . "&ie=utf8&app=detailproduct&through=1");
     curl_setopt($ch, CURLOPT_ENCODING, "gzip, deflate, sdch");
 
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
@@ -118,7 +118,7 @@ function get_html( $url, $row, $con )
 
     $html = curl_exec($ch);
 
-    curl_close($ch);
+
 
     if($html === false)
     {
@@ -154,6 +154,8 @@ function get_html( $url, $row, $con )
 
             //    print_r($data);
 
+            // g_page_config
+            $res[0]["g_page_config"] = $result[1][0];
             // 获取商品数据
             $res[0]["products"] = $data->mods->itemlist->data->auctions;
 
@@ -167,6 +169,7 @@ function get_html( $url, $row, $con )
         }
     }
 
+    curl_close($ch);
 }
 
 
@@ -232,8 +235,27 @@ function insert_database($products, $model, $name, $shundian_price, $con)
     foreach($products as $item)
     {
         if (!in_array($item->nid, $product_ids)) {
-            $des = $item->shopcard->description[0] / 100.0;
-            $des .= '%';
+
+            $item->shopLink = 'https:' . $item->shopLink;
+            $item->detail_url = 'https:' . $item->detail_url;
+
+
+            $rate = get_rateinfo($item->shopLink,$item->detail_url);
+
+//            print_r($rate);
+//            echo "\n\r";die();
+
+//            $des = $rate[1][0];
+//            $des_com_aver = $rate[2][0];
+//
+//
+//            $attitude = $rate[3][0];
+//            $attitude_com_aver = $rate[4][0];
+//
+//            $quatity = $rate[5][0];
+//            $quatity_com_aver = $rate[6][0];
+
+            $des = $rate[1][0];
             $des_com_aver = $item->shopcard->description[2] / 100.0;
             $des_com_aver .= '%';
             if ($item->shopcard->description[1]) {
@@ -243,8 +265,7 @@ function insert_database($products, $model, $name, $shundian_price, $con)
             }
 
 
-            $attitude = $item->shopcard->service[0] / 100.0;
-            $attitude .= '%';
+            $attitude = $rate[2][0];
             $attitude_com_aver = $item->shopcard->service[2] / 100.0;
             $attitude_com_aver .= '%';
             if ($item->shopcard->service[1] > 0) {
@@ -253,8 +274,7 @@ function insert_database($products, $model, $name, $shundian_price, $con)
                 $attitude_com_aver = '低于 ' . $attitude_com_aver;
             }
 
-            $quatity = $item->shopcard->delivery[0] / 100.0;
-            $quatity .= '%';
+            $quatity = $rate[3][0];
             $quatity_com_aver = $item->shopcard->delivery[2] / 100.0;
             $quatity_com_aver .= '%';
             if ($item->shopcard->delivery[1]) {
@@ -262,6 +282,9 @@ function insert_database($products, $model, $name, $shundian_price, $con)
             } else {
                 $quatity_com_aver = '低于 ' . $quatity_com_aver;
             }
+
+
+
 
             $credit = $item->shopcard->sellerCredit;
             $view_sales = intval($item->view_sales);
@@ -273,14 +296,14 @@ function insert_database($products, $model, $name, $shundian_price, $con)
             }
 
             // 拼接product数据
-            $data_string .= "(NULL, '$item->nid', '$item->category', '$model', '$name', '$shundian_price', '$item->nick', '$item->view_price', '$view_sales', '$comment_count', '0', '$credit', '$des', '$des_com_aver', '$attitude', '$attitude_com_aver', '$quatity', '$quatity_com_aver', '1'),";
+            $data_string .= "(NULL, '$item->nid', '$item->category', '$model', '$name', '$shundian_price', '$item->nick', '$item->view_price', '$view_sales', '$comment_count', '0', '$credit', '$des', '$des_com_aver', '$attitude', '$attitude_com_aver', '$quatity', '$quatity_com_aver', '1', '$item->shopLink'),";
 
         }
     }
 
 
 
-    echo '<br><br>' . $data_string;//die();       //4294967295
+//    echo '<br><br>' . $data_string;//die();       //4294967295
 
 // 如果有数据则插入到数据库中tb_product表
     if ($data_string) {
@@ -288,8 +311,8 @@ function insert_database($products, $model, $name, $shundian_price, $con)
         // 去掉最后位置的，
         $data_string = substr($data_string, 0, -1);
 
-        $sql = "INSERT INTO `tb_product` (`id`, `nid`, `category`, `model`, `name`, `shundian_price`, `merchant_name`, `merchant_price`, `view_sales`, `reviews_count`, `is_coalition`, `credit`, `des`, `des_com_aver`, `attitude`, `attitude_com_aver`, `quatity`, `quatity_com_aver`, `good`) VALUES $data_string";
-        echo "<br>\n\r" . $sql."<br>\n\r";
+        $sql = "INSERT INTO `tb_product` (`id`, `nid`, `category`, `model`, `name`, `shundian_price`, `merchant_name`, `merchant_price`, `view_sales`, `reviews_count`, `is_coalition`, `credit`, `des`, `des_com_aver`, `attitude`, `attitude_com_aver`, `quatity`, `quatity_com_aver`, `good`, `shop_link`) VALUES $data_string";
+//        echo "<br>\n\r" . $sql."<br>\n\r";
         $retval = mysql_query($sql, $con);
         if(!$retval) {
 
@@ -308,12 +331,78 @@ function insert_database($products, $model, $name, $shundian_price, $con)
         echo "Enter data successfully.<br>";
     }
 
-
-
-
 }
 
 
+
+/**
+ * 返回描述相符、服务态度、物流服务分数
+ */
+function get_rateinfo( $shopLink, $referer)
+{
+    $ch = curl_init();
+
+    // 设置浏览器的特定header
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        "Connection: keep-alive",
+        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Upgrade-Insecure-Requests: 1",
+        "DNT:1",
+        "Accept-Language: zh-CN,zh;q=0.8,en-GB;q=0.6,en;q=0.4,en-US;q=0.2",
+        "Cookie:cna=ecujDgxJEU8CAdrwlTLMuyK+; thw=cn; miid=7140089985405878683; _m_user_unitinfo_=center; uc2=wuf=https%3A%2F%2Fwww.baidu.com%2Flink%3Furl%3DyuLwEC5VzXl67TX71pM-Pt5ijrzvVp76FosboF3-bRXW_TIMHJDVmk32CWs6e7ra1SuZudckIhHttgRUS5bN_0MaK1Kv-zHpfr0mjFVBPh-Crtxj19HCnfLT8x4uC3p5%26wd%3D%26eqid%3Db1f8688b001197fa000000035668de3b; uc3=nk2=AmkbKafOx9I%3D&id2=UU8PbnneKzSx&vt3=F8dAScPiH8lvv%2FHL%2BUQ%3D&lg2=UIHiLt3xD8xYTw%3D%3D; lgc=axianzia; tracknick=axianzia; mt=np=&ci=3_1; _cc_=U%2BGCWk%2F7og%3D%3D; tg=0; v=0; uc1=cookie14=UoWzUGNqTOEvsA%3D%3D; cookie2=1ced5c4d4b6a7b1add0410eb06484e62; t=441f8ce4777a72bb7ea38953b39d0d4c; swfstore=120797; linezing_session=hMm9a7tS3qYHsL73Sj1tw2F3_1449797234940pw2h_2; _tb_token_=e335ee7876383; _m_h5_tk=aba0e734db020aa34adfd0514ecfd3c6_1449808809939; _m_h5_tk_enc=6c30d6dfe9563ec6b0df80acad26be4f; x=e%3D1%26p%3D*%26s%3D0%26c%3D0%26f%3D0%26g%3D0%26t%3D0%26__ll%3D-1%26_ato%3D0; l=AhgYtVan25wZHmxPB3HCKeCpaEiqAXyL; isg=E58CA9133C4A05BE6936C3EA5438AFC6",
+
+    ));
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36');
+    // 在HTTP请求头中"Referer: "的内容。
+    curl_setopt($ch, CURLOPT_REFERER, $referer);
+    curl_setopt($ch, CURLOPT_ENCODING, "gzip, deflate, sdch");
+
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_URL, $shopLink);
+    curl_setopt($ch, CURLOPT_TIMEOUT,120);
+
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);//302redirect
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+    $html = curl_exec($ch);
+
+    curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+
+    if($html === false)
+    {
+        echo 'Curl error: ' . curl_error($ch) . "<br>\n\r";
+        curl_close($ch);
+    } else {
+        //正则表达式去除所有空格（包括换行 空格 &nbsp;）
+        $html = preg_replace("/(\s|\&nbsp\;|　|\xc2\xa0)/","",$html);
+
+        // 匹配描述相符、服务态度、物流服务分数
+//        $pattern = '/<divclass="shop-rate"id="J_ShopRate2">.*?<ul><li>.*?<emclass="count"title="(.*?)分".*?<em>(.*?)<\/em><\/span><\/a><\/li><li>.*?<emclass="count"title="(.*?)分".*?<em>(.*?)<\/em><\/span><\/a><\/li><li>.*?<emclass="count"title="(.*?)分".*?<em>(.*?)<\/em><\/span><\/a><\/li><\/ul><\/div>/si';
+
+        $pattern = '/<emclass="count"title="(.*?)".*?<\/em>.*?<emclass="count"title="(.*?)".*?<\/em>.*?<emclass="count"title="(.*?)".*?<\/em>/';
+
+        preg_match_all($pattern,$html,$result);
+
+        // 关闭句柄
+        curl_close($ch);
+
+        if (empty($result[1][0])) {
+            $result[1][0] = 0;
+        }
+        if (empty($result[2][0])) {
+            $result[2][0] = 0;
+        }
+        if (empty($result[3][0])) {
+            $result[3][0] = 0;
+        }
+        // 返回描述相符、服务态度、物流服务分数
+        return $result;
+
+    }
+
+}
 
 
 
